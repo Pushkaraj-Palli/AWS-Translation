@@ -3,9 +3,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize the Google API key
-// In production, this should be an environment variable
-// const googleApiKey = process.env.GEMINI_API_KEY || "";
-const googleApiKey = "AIzaSyDb9rVI4WVyYgujG364E0ie-6GIJjmhtRk";
+// Use environment variable for the API key
+const googleApiKey = process.env.GEMINI_API_KEY || "AIzaSyDb9rVI4WVyYgujG364E0ie-6GIJjmhtRk";
 
 // Initialize Google Generative AI (Gemini)
 // Update to use the correct API version
