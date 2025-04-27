@@ -5,5 +5,5 @@
       "use": "@vercel/next"
     }
   ],
-  "buildCommand": "pnpm install --no-frozen-lockfile && pnpm run build"
+  "buildCommand": "npm install && npm run build"
 } 
