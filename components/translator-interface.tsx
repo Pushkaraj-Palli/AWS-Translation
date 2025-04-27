@@ -81,8 +81,8 @@ export default function TranslatorInterface() {
 
   const getServiceDisplayName = (service: TranslationService): string => {
     switch (service) {
-      case "google": return "Google Translate";
-      case "gemini": return "Google Gemini (AI-Enhanced)";
+      case "google": return "Standard Translation";
+      case "gemini": return "AI-Enhanced Translation";
       default: return service;
     }
   }
@@ -187,8 +187,8 @@ export default function TranslatorInterface() {
             <CardTitle className="text-2xl font-bold">AI-Powered Multilingual Translator</CardTitle>
             <CardDescription>
               {translationService === "gemini" 
-                ? "Powered by Google Gemini for enhanced natural translations" 
-                : "Using Google Translate API for direct translations"}
+                ? "AI-Powered Multilingual Translator" 
+                : "AI-Powered Multilingual Translator"}
             </CardDescription>
           </div>
           <Popover>
@@ -210,14 +210,14 @@ export default function TranslatorInterface() {
                       <SelectValue placeholder="Select service" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gemini">Google Gemini (AI-Enhanced)</SelectItem>
-                      <SelectItem value="google">Google Translate</SelectItem>
+                      <SelectItem value="gemini">AI-Enhanced Translation</SelectItem>
+                      <SelectItem value="google">Standard Translation</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Using browser-based Text-to-Speech for audio
+                    Using advanced text-to-speech technology
                   </p>
                 </div>
               </div>
