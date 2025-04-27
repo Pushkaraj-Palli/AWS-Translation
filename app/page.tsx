@@ -22,6 +22,18 @@ export default function HomePage() {
           </Button>
         </Link>
       </div>
+      
+      {/* Hero Text */}
+      <div className="absolute top-1/4 left-0 w-full flex justify-center items-center z-10">
+        <div className="text-center space-y-4 max-w-xl px-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground drop-shadow-md">
+            Google Gemini Translator
+          </h1>
+          <p className="text-xl text-primary-foreground/90 drop-shadow-md">
+            Powered exclusively by Google Gemini AI for smarter, more natural translations across 30+ languages
+          </p>
+        </div>
+      </div>
      
       {/* Get Started button */}
       <div className="absolute bottom-16 left-0 w-full flex justify-center items-center z-10">

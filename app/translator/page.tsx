@@ -24,7 +24,7 @@ export default function TranslatorPage() {
       <main className="min-h-screen flex flex-col">
         <header className="w-full p-4 bg-background/80 backdrop-blur-sm border-b z-10">
           <div className="container flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Multilingual Translator</h1>
+            <h1 className="text-2xl font-bold">Google Gemini Translator</h1>
             <div className="flex gap-2">
               <Link href="/">
                 <Button variant="ghost" size="sm">

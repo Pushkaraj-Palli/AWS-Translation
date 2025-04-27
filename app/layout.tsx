@@ -8,9 +8,9 @@ import { AuthProvider } from "./context/AuthContext"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Multilingual Translator App",
-  description: "Translate between multiple languages using AWS Translate and AWS Polly",
-    generator: 'v0.dev'
+  title: "Google Gemini-Powered Translator",
+  description: "Translate between 30+ languages using Google Gemini AI for enhanced translations and Google Text-to-Speech",
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

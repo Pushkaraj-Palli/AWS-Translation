@@ -1,62 +1,28 @@
 "use server"
 
-import { TranslateClient, TranslateTextCommand } from "@aws-sdk/client-translate"
-import { PollyClient, SynthesizeSpeechCommand } from "@aws-sdk/client-polly"
-import { getLanguageVoice } from "@/lib/languages"
+import { geminiTranslateText } from "./services/google-services"
 
-// Initialize AWS clients
-const translateClient = new TranslateClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
+// Service type for different translation providers - now just using Gemini variants
+export type TranslationService = "google" | "gemini";
 
-const pollyClient = new PollyClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
-
-export async function translateText(text: string, sourceLanguage: string, targetLanguage: string): Promise<string> {
+// Main translation function that routes to the appropriate service
+export async function translateText(
+  text: string, 
+  sourceLanguage: string, 
+  targetLanguage: string,
+  service: TranslationService = "gemini" // Default to gemini for best quality
+): Promise<string> {
   try {
-    const command = new TranslateTextCommand({
-      Text: text,
-      SourceLanguageCode: sourceLanguage,
-      TargetLanguageCode: targetLanguage,
-    })
-
-    const response = await translateClient.send(command)
-    return response.TranslatedText || ""
+    // Now we only use geminiTranslateText for all translations
+    return await geminiTranslateText(text, sourceLanguage, targetLanguage);
   } catch (error) {
-    console.error("Translation error:", error)
-    throw new Error("Failed to translate text")
-  }
-}
-
-export async function synthesizeSpeech(text: string, languageCode: string): Promise<string> {
-  try {
-    const voice = getLanguageVoice(languageCode)
-    const command = new SynthesizeSpeechCommand({
-      Text: text,
-      VoiceId: voice as any,
-      OutputFormat: "mp3",
-      Engine: "neural",
-    })
-
-    const response = await pollyClient.send(command)
+    console.error("Translation error:", error);
     
-    // Convert the audio stream to base64
-    const audioData = await response.AudioStream?.transformToByteArray()
-    if (!audioData) throw new Error("No audio data received")
+    // Provide a more user-friendly error message
+    if (error instanceof Error) {
+      throw new Error(`Translation failed: ${error.message}`);
+    }
     
-    const base64Audio = Buffer.from(audioData).toString('base64')
-    return `data:audio/mp3;base64,${base64Audio}`
-  } catch (error) {
-    console.error("Speech synthesis error:", error)
-    throw new Error("Failed to synthesize speech")
+    throw new Error("Translation failed. Please try again.");
   }
 }

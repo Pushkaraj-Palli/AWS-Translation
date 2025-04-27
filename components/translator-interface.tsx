@@ -1,14 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { translateText, synthesizeSpeech } from "@/app/actions"
-import { Loader2, Volume2, Copy, RotateCcw } from "lucide-react"
+import { translateText, TranslationService } from "@/app/actions"
+import { Loader2, Volume2, Copy, RotateCcw, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { LANGUAGES } from "@/lib/languages"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export default function TranslatorInterface() {
   const [sourceLanguage, setSourceLanguage] = useState("en")
@@ -20,42 +28,110 @@ export default function TranslatorInterface() {
   const [isPlayingTarget, setIsPlayingTarget] = useState(false)
   const [sourceAudioUrl, setSourceAudioUrl] = useState("")
   const [targetAudioUrl, setTargetAudioUrl] = useState("")
+  const [translationService, setTranslationService] = useState<TranslationService>("gemini")
+  const [errorMessage, setErrorMessage] = useState("")
   const { toast } = useToast()
+
+  // Initialize speech synthesis
+  useEffect(() => {
+    // Check if the browser supports speech synthesis
+    if (!('speechSynthesis' in window)) {
+      console.warn("Browser doesn't support speech synthesis");
+    }
+  }, []);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return
 
+    setIsTranslating(true)
+    setErrorMessage("")
+
     try {
-      setIsTranslating(true)
-      const result = await translateText(inputText, sourceLanguage, targetLanguage)
+      // First attempt the translation
+      const result = await translateText(inputText, sourceLanguage, targetLanguage, translationService)
       setTranslatedText(result)
 
-      // Generate speech for both source and translated text
-      const [sourceAudio, targetAudio] = await Promise.all([
-        synthesizeSpeech(inputText, sourceLanguage),
-        synthesizeSpeech(result, targetLanguage)
-      ])
+      // Store the text for speech synthesis
+      setSourceAudioUrl(`browser-tts://${encodeURIComponent(inputText)}?lang=${sourceLanguage}`);
+      setTargetAudioUrl(`browser-tts://${encodeURIComponent(result)}?lang=${targetLanguage}`);
       
-      setSourceAudioUrl(sourceAudio)
-      setTargetAudioUrl(targetAudio)
+      toast({
+        title: "Translation Complete",
+        description: `Translated using ${getServiceDisplayName(translationService)}`,
+      })
     } catch (error) {
+      console.error("Translation process error:", error)
+      let errorMsg = "Failed to translate text. Please try again."
+      
+      if (error instanceof Error) {
+        errorMsg = error.message || errorMsg
+      }
+      
+      setErrorMessage(errorMsg)
+      
       toast({
         title: "Translation Error",
-        description: "Failed to translate text. Please try again.",
+        description: errorMsg,
         variant: "destructive",
       })
-      console.error("Translation error:", error)
     } finally {
       setIsTranslating(false)
+    }
+  }
+
+  const getServiceDisplayName = (service: TranslationService): string => {
+    switch (service) {
+      case "google": return "Google Translate";
+      case "gemini": return "Google Gemini (AI-Enhanced)";
+      default: return service;
     }
   }
 
   const handlePlayAudio = async (isSource: boolean) => {
     const audioUrl = isSource ? sourceAudioUrl : targetAudioUrl
     const setPlaying = isSource ? setIsPlayingSource : setIsPlayingTarget
+    const language = isSource ? sourceLanguage : targetLanguage
+    const text = isSource ? inputText : translatedText
 
     if (!audioUrl) return
 
+    // Check if this is a browser TTS URL
+    if (audioUrl.startsWith('browser-tts://')) {
+      setPlaying(true)
+      
+      try {
+        // Use the browser's speech synthesis
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = language;
+        
+        utterance.onend = () => {
+          setPlaying(false);
+        };
+        
+        utterance.onerror = (event) => {
+          console.error("Speech synthesis error:", event);
+          setPlaying(false);
+          toast({
+            title: "Speech Error",
+            description: "Could not play audio. Your browser may not support this language.",
+            variant: "destructive",
+          });
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error("Browser TTS error:", err);
+        setPlaying(false);
+        toast({
+          title: "Speech Error",
+          description: "Your browser doesn't support text-to-speech.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // Fall back to audio playback for non-browser TTS URLs
     const audio = new Audio(audioUrl)
     setPlaying(true)
 
@@ -89,6 +165,7 @@ export default function TranslatorInterface() {
     setTranslatedText("")
     setSourceAudioUrl("")
     setTargetAudioUrl("")
+    setErrorMessage("")
   }
 
   const handleSwapLanguages = () => {
@@ -99,13 +176,54 @@ export default function TranslatorInterface() {
     setTranslatedText("")
     setSourceAudioUrl("")
     setTargetAudioUrl("")
+    setErrorMessage("")
   }
 
   return (
     <Card className="w-full max-w-2xl shadow-lg">
       <CardHeader className="pb-4">
-        <CardTitle className="text-2xl font-bold">Multilingual Translator</CardTitle>
-        <CardDescription>Translate text between multiple languages with AWS Translate</CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl font-bold">AI-Powered Multilingual Translator</CardTitle>
+            <CardDescription>
+              {translationService === "gemini" 
+                ? "Powered by Google Gemini for enhanced natural translations" 
+                : "Using Google Translate API for direct translations"}
+            </CardDescription>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <h4 className="font-medium">Translation Settings</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="translation-service">Translation Provider</Label>
+                  <Select
+                    value={translationService}
+                    onValueChange={(value) => setTranslationService(value as TranslationService)}
+                  >
+                    <SelectTrigger id="translation-service">
+                      <SelectValue placeholder="Select service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">Google Gemini (AI-Enhanced)</SelectItem>
+                      <SelectItem value="google">Google Translate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Using browser-based Text-to-Speech for audio
+                  </p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center gap-4">
@@ -166,7 +284,7 @@ export default function TranslatorInterface() {
               variant="outline"
               size="icon"
               onClick={() => handlePlayAudio(true)}
-              disabled={!sourceAudioUrl || isPlayingSource}
+              disabled={!inputText || isPlayingSource}
             >
               {isPlayingSource ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -180,6 +298,7 @@ export default function TranslatorInterface() {
             className="min-h-[120px] resize-none"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            disabled={isTranslating}
           />
         </div>
 
@@ -187,7 +306,7 @@ export default function TranslatorInterface() {
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-medium">Translation</h3>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCopyText} disabled={!translatedText}>
+              <Button variant="outline" size="sm" onClick={handleCopyText} disabled={!translatedText || isTranslating}>
                 <Copy className="h-4 w-4 mr-2" />
                 Copy
               </Button>
@@ -195,7 +314,7 @@ export default function TranslatorInterface() {
                 variant="outline"
                 size="icon"
                 onClick={() => handlePlayAudio(false)}
-                disabled={!targetAudioUrl || isPlayingTarget}
+                disabled={!translatedText || isPlayingTarget || isTranslating}
               >
                 {isPlayingTarget ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -209,6 +328,10 @@ export default function TranslatorInterface() {
             {isTranslating ? (
               <div className="h-full flex items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : errorMessage ? (
+              <div className="h-full flex items-center justify-center text-destructive">
+                <p className="text-center">{errorMessage}</p>
               </div>
             ) : (
               <p className="whitespace-pre-wrap">{translatedText}</p>
